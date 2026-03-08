@@ -17,7 +17,7 @@ import {
   getStatus,
   recurConfigToRSchedule,
 } from '../../shared/schedules';
-import type { ScheduleEntity } from '../../types/models';
+import type { RecurConfig, ScheduleEntity } from '../../types/models';
 import { addTransactions } from '../accounts/sync';
 import { createApp } from '../app';
 import { aqlQuery } from '../aql';
@@ -356,14 +356,22 @@ function discoverSchedules() {
   return findSchedules();
 }
 
-async function getUpcomingDates({ config, count }) {
+async function getUpcomingDates({
+  config,
+  count,
+  startDate,
+}: {
+  config: RecurConfig;
+  count: number;
+  startDate: Date;
+}): Promise<string[]> {
   const rules = recurConfigToRSchedule(config);
 
   try {
     const schedule = new RSchedule({ rrules: rules });
 
     return schedule
-      .occurrences({ start: d.startOfDay(new Date()), take: count })
+      .occurrences({ start: d.startOfDay(startDate), take: count })
       .toArray()
       .map(date =>
         config.skipWeekend

@@ -315,6 +315,7 @@ export function useScheduleEdit({
       const { data } = await sendCatch('schedule/get-upcoming-dates', {
         config: date,
         count: 3,
+        startDate: monthUtils.currentDate(),
       });
       dispatch({ type: 'set-upcoming-dates', dates: data });
     }

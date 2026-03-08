@@ -410,6 +410,7 @@ function RecurringScheduleTooltip({
       const { data, error } = await sendCatch('schedule/get-upcoming-dates', {
         config: unparseConfig(config),
         count: 4,
+        startDate: monthUtils.currentDate(),
       });
       setPreviewDates(error ? t('Invalid rule') : data);
     }

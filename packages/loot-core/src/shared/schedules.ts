@@ -7,6 +7,7 @@ import { t } from 'i18next';
 import type {
   PayeeEntity,
   RecurConfig,
+  RecurPattern,
   ScheduleEntity,
 } from 'loot-core/types/models';
 
@@ -262,9 +263,63 @@ type ScheduleRuleOptions = IRuleOptions & {
   frequency: string;
   interval?: number;
   byHourOfDay?: number[];
+  byMonthOfYear?: number[];
+  byDayOfMonth?: number[];
+  byDayOfWeek?: (string | [string, number])[];
 };
 
-export function recurConfigToRSchedule(config) {
+// Months that don't have day 31: Feb(2), Apr(4), Jun(6), Sep(9), Nov(11)
+const MONTHS_WITHOUT_31 = [2, 4, 6, 9, 11];
+// Months that don't have day 30: Feb(2)
+const MONTHS_WITHOUT_30 = [2];
+// Months that don't have day 29 (in non-leap years): Feb(2)
+const MONTHS_WITHOUT_29 = [2];
+
+/**
+ * Creates fallback rrules for days that don't exist in all months (29, 30, 31).
+ * For these days, we add a yearly rule that targets the last day of months
+ * where the specified day doesn't exist.
+ *
+ * For example, for day 30:
+ * - Primary rule: byDayOfMonth [30] monthly (skips Feb)
+ * - Fallback rule: byDayOfMonth [-1] yearly for Feb only
+ */
+function createMonthlyFallbackRules(
+  base: ScheduleRuleOptions,
+  dayOfMonth: number,
+): ScheduleRuleOptions[] {
+  const rules: ScheduleRuleOptions[] = [];
+
+  // Primary rule for the specific day
+  rules.push({ ...base, byDayOfMonth: [dayOfMonth] });
+
+  // Determine which months need a fallback (last day of month)
+  let fallbackMonths: number[] = [];
+  if (dayOfMonth === 31) {
+    fallbackMonths = MONTHS_WITHOUT_31;
+  } else if (dayOfMonth === 30) {
+    fallbackMonths = MONTHS_WITHOUT_30;
+  } else if (dayOfMonth === 29) {
+    fallbackMonths = MONTHS_WITHOUT_29;
+  }
+
+  // Add fallback rule for months that don't have this day
+  if (fallbackMonths.length > 0) {
+    // Create a yearly rule that fires on the last day of each fallback month
+    // We need to omit 'count' from the fallback since it applies to the primary rule
+    const { count: _count, ...baseWithoutCount } = base;
+    rules.push({
+      ...baseWithoutCount,
+      frequency: 'YEARLY',
+      byMonthOfYear: fallbackMonths,
+      byDayOfMonth: [-1], // Last day of month
+    });
+  }
+
+  return rules;
+}
+
+export function recurConfigToRSchedule(config: RecurConfig): ScheduleRuleOptions[] {
   const base: ScheduleRuleOptions = {
     start: monthUtils.parseDate(config.start),
     frequency: config.frequency.toUpperCase(),
@@ -286,7 +341,7 @@ export function recurConfigToRSchedule(config) {
       break;
   }
 
-  const abbrevDay = name => name.slice(0, 2).toUpperCase();
+  const abbrevDay = (name: RecurPattern["type"]): string => name.slice(0, 2).toUpperCase();
 
   switch (config.frequency) {
     case 'daily':
@@ -300,15 +355,37 @@ export function recurConfigToRSchedule(config) {
         const days = config.patterns.filter(p => p.type === 'day');
         const dayNames = config.patterns.filter(p => p.type !== 'day');
 
-        return [
-          days.length > 0 && { ...base, byDayOfMonth: days.map(p => p.value) },
-          dayNames.length > 0 && {
+        const result: ScheduleRuleOptions[] = [];
+
+        // Handle day-of-month patterns with fallbacks for 29, 30, 31
+        if (days.length > 0) {
+          for (const dayPattern of days) {
+            const day = dayPattern.value;
+            if (day >= 29) {
+              // Use fallback rules for days that don't exist in all months
+              result.push(...createMonthlyFallbackRules(base, day));
+            } else {
+              result.push({ ...base, byDayOfMonth: [day] });
+            }
+          }
+        }
+
+        // Handle day-of-week patterns (e.g., "2nd Tuesday")
+        if (dayNames.length > 0) {
+          result.push({
             ...base,
             byDayOfWeek: dayNames.map(p => [abbrevDay(p.type), p.value]),
-          },
-        ].filter(Boolean);
+          });
+        }
+
+        return result;
       } else {
-        // Nothing to do
+        // No patterns - uses the start date's day of month
+        const startDay = base.start ? base.start.getDate() : 1;
+        if (startDay >= 29) {
+          // Use fallback rules for days that don't exist in all months
+          return createMonthlyFallbackRules(base, startDay);
+        }
         return [base];
       }
     case 'yearly':
