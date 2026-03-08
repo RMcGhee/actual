@@ -168,4 +168,54 @@ test.describe('Schedules', () => {
     }
     await expect(page).toMatchThemeScreenshots();
   });
+
+  test('creates a schedule on the 31st and shows fallback dates for February and April', async () => {
+    // Test that schedules for day 31 properly show February's last day as fallback
+    // Since the test starts on Jan 1, 2017, a schedule for the 29th should show:
+    // - Jan 31, 2017
+    // - Feb 28, 2017 (fallback to last day since Feb doesn't have 31st)
+    // - Mar 31, 2017
+    // - Apr 30, 2017 (fallback to last day)
+    await page.getByRole('button', { name: 'Change upcoming length' }).click();
+    await page.getByRole('button', { name: 'week' }).click();
+    await page.getByRole('button', { name: 'Custom length' }).click();
+    await page.getByRole('button', { name: 'Days' }).click();
+    await page.getByRole('button', { name: 'Years' }).click();
+
+    await expect(page).toMatchThemeScreenshots();
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    const scheduleEditModal = await schedulesPage.addNewSchedule();
+    await scheduleEditModal.fill({
+      scheduleName: 'Months without days',
+      payee: 'Monthly Bill',
+      account: 'HSBC',
+      amount: 100,
+      dayOfMonth: 31,
+    });
+    await expect(page).toMatchThemeScreenshots();
+
+    // Verify the preview dates show February 28th as fallback (since 2017 is not a leap year)
+    await scheduleEditModal.expectSchedulePreviewDatesToBe([
+      '1/31/2017',
+      // Duplicate tuesdays are skipped
+      '2/28/2017', // Fallback to last day of Feb
+      '3/31/2017',
+      'Friday',
+      '4/30/2017', // Fallback to last day of Apr
+      'Sunday',
+    ]);
+
+    // Apply the recurring schedule and add
+    await scheduleEditModal.applyRecurringSchedule();
+    await expect(page).toMatchThemeScreenshots();
+    await scheduleEditModal.add();
+
+    const schedule = schedulesPage.getNthSchedule(4);
+    await expect(schedule.payee).toHaveText('Monthly Bill');
+    await expect(schedule.account).toHaveText('HSBC');
+    await expect(schedule.date).toHaveText('01/31/2017');
+    await expect(schedule.amount).toHaveText('~100.00');
+    await expect(page).toMatchThemeScreenshots();
+  });
 });

@@ -5,6 +5,7 @@ type ScheduleEntry = {
   payee?: string;
   account?: string;
   amount?: number;
+  dayOfMonth?: number;
 };
 
 export class ScheduleEditModal {
@@ -58,6 +59,35 @@ export class ScheduleEditModal {
     if (data.amount) {
       await this.amountInput.fill(String(data.amount));
     }
+
+    if (data.dayOfMonth) {
+      // Click on the recurring schedule picker button to open the popover
+      const dateButton = this.page.getByRole('button', {
+        name: /Every month on the/,
+      });
+      await dateButton.click();
+
+      // Click the day button in the day-of-month picker
+      const dayButton = this.page.getByRole('button', {
+        name: String(data.dayOfMonth),
+        exact: true,
+      });
+      await dayButton.click();
+    }
+  }
+
+  async expectSchedulePreviewDatesToBe(
+    expectedDateStrings: string[],
+  ): Promise<void> {
+    // Verify that each expected date appears in the modal
+    for (const date of expectedDateStrings) {
+      await this.page.getByText(date, { exact: true }).waitFor();
+    }
+  }
+
+  async applyRecurringSchedule() {
+    const applyButton = this.page.getByRole('button', { name: 'Apply' });
+    await applyButton.click();
   }
 
   async save() {

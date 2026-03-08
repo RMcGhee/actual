@@ -319,7 +319,9 @@ function createMonthlyFallbackRules(
   return rules;
 }
 
-export function recurConfigToRSchedule(config: RecurConfig): ScheduleRuleOptions[] {
+export function recurConfigToRSchedule(
+  config: RecurConfig,
+): ScheduleRuleOptions[] {
   const base: ScheduleRuleOptions = {
     start: monthUtils.parseDate(config.start),
     frequency: config.frequency.toUpperCase(),
@@ -341,7 +343,8 @@ export function recurConfigToRSchedule(config: RecurConfig): ScheduleRuleOptions
       break;
   }
 
-  const abbrevDay = (name: RecurPattern["type"]): string => name.slice(0, 2).toUpperCase();
+  const abbrevDay = (name: RecurPattern['type']): string =>
+    name.slice(0, 2).toUpperCase();
 
   switch (config.frequency) {
     case 'daily':
