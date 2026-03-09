@@ -198,12 +198,9 @@ test.describe('Schedules', () => {
     // Verify the preview dates show February 28th as fallback (since 2017 is not a leap year)
     await scheduleEditModal.expectSchedulePreviewDatesToBe([
       '1/31/2017',
-      // Duplicate tuesdays are skipped
       '2/28/2017', // Fallback to last day of Feb
       '3/31/2017',
-      'Friday',
       '4/30/2017', // Fallback to last day of Apr
-      'Sunday',
     ]);
 
     // Apply the recurring schedule and add

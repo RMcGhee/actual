@@ -62,9 +62,9 @@ export class ScheduleEditModal {
 
     if (data.dayOfMonth) {
       // Click on the recurring schedule picker button to open the popover
-      const dateButton = this.page.getByRole('button', {
-        name: /Every month on the/,
-      });
+      const dateButton = this.page.getByTestId(
+        'recurring-schedule-picker-button',
+      );
       await dateButton.click();
 
       // Click the day button in the day-of-month picker

@@ -657,6 +657,7 @@ export function RecurringSchedulePicker({
         ref={triggerRef}
         style={{ textAlign: 'left', ...buttonStyle }}
         onPress={() => setIsOpen(true)}
+        data-testid="recurring-schedule-picker-button"
       >
         {value ? recurringDescription : t('No recurring date')}
       </Button>
