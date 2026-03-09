@@ -293,6 +293,12 @@ function createMonthlyFallbackRules(
   // Primary rule for the specific day
   rules.push({ ...base, byDayOfMonth: [dayOfMonth] });
 
+  // Since the fallback rules are yearly, fallbacks cannot reasonably be created for monthly
+  // intervals other than 1.
+  if (base.interval > 1) {
+    return rules;
+  }
+
   // Determine which months need a fallback (last day of month)
   let fallbackMonths: number[] = [];
   if (dayOfMonth === 31) {

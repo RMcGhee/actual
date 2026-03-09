@@ -6,6 +6,7 @@ import { Button } from '@actual-app/components/button';
 import { useResponsive } from '@actual-app/components/hooks/useResponsive';
 import { SvgAdd, SvgSubtract } from '@actual-app/components/icons/v0';
 import { SvgInformationOutline } from '@actual-app/components/icons/v1';
+import { SvgAlertTriangle } from '@actual-app/components/icons/v2';
 import { InitialFocus } from '@actual-app/components/initial-focus';
 import { Input } from '@actual-app/components/input';
 import { Menu } from '@actual-app/components/menu';
@@ -452,29 +453,38 @@ function RecurringScheduleTooltip({
         {config.frequency === 'monthly' && (
           <View
             style={{
-              marginTop: 10,
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 5,
+              marginLeft: 10,
             }}
           >
             <Tooltip
               content={t(
-                'When the 29th, 30th, or 31st days are selected, months without these days will instead use the last day of the month.',
+                Number(config.interval) !== 1
+                  ? 'Interval != 1: If the 29th, 30th, or 31st is selected, months without those days will be skipped.'
+                  : 'When the 29th, 30th, or 31st days are selected, months without these days will instead use the last day of the month.',
               )}
             >
-              <SvgInformationOutline
-                style={{
-                  width: 14,
-                  height: 14,
-                  color: theme.pageTextLight,
-                  cursor: 'pointer',
-                }}
-              />
+              {Number(config.interval) === 1 ? (
+                <SvgInformationOutline
+                  style={{
+                    width: 14,
+                    height: 14,
+                    color: theme.pageTextLight,
+                    cursor: 'pointer',
+                  }}
+                />
+              ) : (
+                <SvgAlertTriangle
+                  style={{
+                    width: 14,
+                    height: 14,
+                    color: theme.warningText,
+                    cursor: 'pointer',
+                  }}
+                />
+              )}
             </Tooltip>
-            <Text style={{ color: theme.pageTextLight, fontSize: 12 }}>
-              <Trans>End of month info</Trans>
-            </Text>
           </View>
         )}
         {config.endMode === 'after_n_occurrences' && (
